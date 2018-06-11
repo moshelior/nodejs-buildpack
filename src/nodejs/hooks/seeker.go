@@ -91,12 +91,12 @@ func (h SeekerAfterCompileHook) downloadFile(url, destFile string) error {
 	return writeToFile(resp.Body, destFile, 0666)
 }
 func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.Stager) (error, string) {
-	var sensorDownloadRelativeUrl = "rest/ui/installers/binaries/LINUX"
 	parsedEnterpriseServerUrl, err := url.Parse(h.serviceCredentials.EnterpriseServerURL)
 	if err != nil {
 		return err, ""
 	}
-	var sensorDownloadAbsoluteUrl = path.Join(parsedEnterpriseServerUrl.Path, sensorDownloadRelativeUrl)
+	var sensorDownloadAbsoluteUrl = path.Join(parsedEnterpriseServerUrl.Path, "rest/ui/installers/binaries/LINUX")
+	h.Log.Info("Sensor download url %s",sensorDownloadAbsoluteUrl)
 	var seekerTempFolder = filepath.Join(os.TempDir(), "seeker_tmp")
 	os.RemoveAll(seekerTempFolder)
 	err = os.MkdirAll(filepath.Dir(seekerTempFolder), 0755)
