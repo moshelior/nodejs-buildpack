@@ -100,7 +100,7 @@ func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.S
 	h.Log.Info("Sensor download url %s",sensorDownloadAbsoluteUrl)
 	var seekerTempFolder = filepath.Join(os.TempDir(), "seeker_tmp")
 	os.RemoveAll(seekerTempFolder)
-	err = os.MkdirAll(filepath.Dir(seekerTempFolder), 0755)
+	err = os.MkdirAll(seekerTempFolder, 0755)
 	if err != nil {
 		return err, ""
 	}
@@ -114,13 +114,15 @@ func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.S
 		return err, ""
 	}
 	// no native zip support for unzip - using shell utility
-	err = h.Command.Execute("", os.Stdout, os.Stderr, "unzip "+sensorInstallerZipAbsolutePath, compiler.BuildDir())
+	unzipCommandArgs := []string {sensorInstallerZipAbsolutePath,"-d",seekerTempFolder}
+	err = h.Command.Execute("", os.Stdout, os.Stderr, "unzip", unzipCommandArgs...)
 	if err != nil {
 		return err, ""
 	}
 	sensorJarFile := path.Join(seekerTempFolder,"SeekerInstaller.jar")
-	agentPathInsideJarFile := "inline/agents/java/*"
-	err = h.Command.Execute("", os.Stdout, os.Stderr, "unzip -j "+sensorJarFile +" " + agentPathInsideJarFile + " -d " + os.TempDir(), compiler.BuildDir())
+	agentPathInsideJarFile := "inline/agents/nodejs/*"
+	unzipCommandArgs = []string {"-j",sensorJarFile,agentPathInsideJarFile, "-d",os.TempDir()}
+	err = h.Command.Execute("", os.Stdout, os.Stderr, "unzip", unzipCommandArgs...)
 	if err != nil {
 		return err, ""
 	}
