@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"path"
 	"net/url"
-	"log"
 )
 
 type SeekerAfterCompileHook struct {
