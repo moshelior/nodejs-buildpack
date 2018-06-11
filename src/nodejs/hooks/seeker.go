@@ -99,7 +99,9 @@ func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.S
 	sensorDownloadAbsoluteUrl := parsedEnterpriseServerUrl.String()
 	h.Log.Info("Sensor download url %s",sensorDownloadAbsoluteUrl)
 	var seekerTempFolder = filepath.Join(os.TempDir(), "seeker_tmp")
+	seekerLibraryPath := filepath.Join(os.TempDir(), "seeker-agent.tgz")
 	os.RemoveAll(seekerTempFolder)
+	os.Remove(seekerLibraryPath)
 	err = os.MkdirAll(seekerTempFolder, 0755)
 	if err != nil {
 		return err, ""
@@ -126,7 +128,6 @@ func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.S
 	if err != nil {
 		return err, ""
 	}
-	seekerLibraryPath := filepath.Join(os.TempDir(), "seeker-agent.tgz")
 	if _, err := os.Stat(seekerLibraryPath); os.IsNotExist(err) {
 		return errors.New("Could not find "+ seekerLibraryPath), ""
 	}
