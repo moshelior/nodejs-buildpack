@@ -99,10 +99,13 @@ func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.S
 		return err, ""
 	}
 	sensorInstallerZipAbsolutePath := path.Join(seekerTempFolder, "SensorInstaller.zip")
-	h.Log.Debug("Downloading '%s' to '%s'", sensorDownloadAbsoluteUrl, sensorInstallerZipAbsolutePath)
+	h.Log.Info("Downloading '%s' to '%s'", sensorDownloadAbsoluteUrl, sensorInstallerZipAbsolutePath)
 	err = h.downloadFile(sensorDownloadAbsoluteUrl, sensorInstallerZipAbsolutePath)
 	if err == nil {
 		h.Log.Info("Download completed without errors")
+	}
+	if err != nil {
+		return err, ""
 	}
 	// no native zip support for unzip - using shell utility
 	err = h.Command.Execute("", os.Stdout, os.Stderr, "unzip "+sensorInstallerZipAbsolutePath, compiler.BuildDir())
