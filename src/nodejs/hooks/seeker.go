@@ -95,7 +95,8 @@ func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.S
 	if err != nil {
 		return err, ""
 	}
-	var sensorDownloadAbsoluteUrl = path.Join(parsedEnterpriseServerUrl.Path, "rest/ui/installers/binaries/LINUX")
+	parsedEnterpriseServerUrl.Path = path.Join(parsedEnterpriseServerUrl.Path, "rest/ui/installers/binaries/LINUX")
+	sensorDownloadAbsoluteUrl := parsedEnterpriseServerUrl.String()
 	h.Log.Info("Sensor download url %s",sensorDownloadAbsoluteUrl)
 	var seekerTempFolder = filepath.Join(os.TempDir(), "seeker_tmp")
 	os.RemoveAll(seekerTempFolder)
