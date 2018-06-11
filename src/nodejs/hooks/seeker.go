@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"fmt"
 	"path"
+	"net/url"
+	"log"
 )
 
 type SeekerAfterCompileHook struct {
@@ -91,10 +93,14 @@ func (h SeekerAfterCompileHook) downloadFile(url, destFile string) error {
 }
 func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.Stager) (error, string) {
 	var sensorDownloadRelativeUrl = "rest/ui/installers/binaries/LINUX"
-	var sensorDownloadAbsoluteUrl = path.Join(h.serviceCredentials.EnterpriseServerURL, sensorDownloadRelativeUrl)
+	parsedEnterpriseServerUrl, err := url.Parse(h.serviceCredentials.EnterpriseServerURL)
+	if err != nil {
+		return err, ""
+	}
+	var sensorDownloadAbsoluteUrl = path.Join(parsedEnterpriseServerUrl.Path, sensorDownloadRelativeUrl)
 	var seekerTempFolder = filepath.Join(os.TempDir(), "seeker_tmp")
 	os.RemoveAll(seekerTempFolder)
-	err := os.MkdirAll(filepath.Dir(seekerTempFolder), 0755)
+	err = os.MkdirAll(filepath.Dir(seekerTempFolder), 0755)
 	if err != nil {
 		return err, ""
 	}
