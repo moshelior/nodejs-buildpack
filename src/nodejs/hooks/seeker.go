@@ -12,6 +12,8 @@ import (
 	"io/ioutil"
 	"strconv"
 	"fmt"
+	"net/url"
+	"path"
 )
 
 type SeekerAfterCompileHook struct {
@@ -24,7 +26,7 @@ type SeekerAfterCompileHook struct {
 type SeekerCredentials struct {
 	SensorHost       string
 	SensorPort       string
-	AgentDownloadURI string
+	EnterpriseServerURL string
 }
 
 func init() {
@@ -47,7 +49,7 @@ func (h SeekerAfterCompileHook) AfterCompile(compiler *libbuildpack.Stager) erro
 	h.serviceCredentials = &serviceCredentials
 	credentialsJSON, _ := json.Marshal(h.serviceCredentials)
 	h.Log.Info("Credentials extraction ok: %s", credentialsJSON)
-	err, seekerLibraryToInstall := h.fetchSeekerAgentTarball()
+	err, seekerLibraryToInstall := h.fetchSeekerAgentTarball(compiler)
 	if err == nil {
 		h.Log.Info("Before Installing seeker agent dependency")
 		h.updateNodeModules(seekerLibraryToInstall, compiler.BuildDir())
@@ -70,8 +72,8 @@ func assertServiceCredentialsValid(credentials SeekerCredentials) error {
 	if credentials.SensorHost == "" {
 		return errors.New(fmt.Sprintf(errorFormat, "sensor_host"))
 	}
-	if credentials.AgentDownloadURI == "" {
-		return errors.New(fmt.Sprintf(errorFormat, "agent_uri"))
+	if credentials.EnterpriseServerURL == "" {
+		return errors.New(fmt.Sprintf(errorFormat, "enterprise_server_url"))
 	}
 	return nil
 }
@@ -88,13 +90,41 @@ func (h SeekerAfterCompileHook) downloadFile(url, destFile string) error {
 	}
 	return writeToFile(resp.Body, destFile, 0666)
 }
-func (h SeekerAfterCompileHook) fetchSeekerAgentTarball() (error, string) {
-	seekerLibraryPath := filepath.Join(os.TempDir(), "seeker_node_agent.tgz")
-	h.Log.Debug("Downloading '%s' to '%s'", h.serviceCredentials.AgentDownloadURI, seekerLibraryPath)
-	err := h.downloadFile(h.serviceCredentials.AgentDownloadURI, seekerLibraryPath)
+func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.Stager) (error, string) {
+	parsedEnterpriseServerUrl, err := url.Parse(h.serviceCredentials.EnterpriseServerURL)
+	if err != nil {
+		return err, ""
+	}
+	parsedEnterpriseServerUrl.Path = path.Join(parsedEnterpriseServerUrl.Path, "/rest/ui/installers/agents/binaries/NODEJS")
+	agentDownloadAbsoluteUrl := parsedEnterpriseServerUrl.String()
+	h.Log.Info("Agent download url %s", agentDownloadAbsoluteUrl)
+	var seekerTempFolder = filepath.Join(os.TempDir(), "seeker_tmp")
+	seekerLibraryPath := filepath.Join(os.TempDir(), "seeker-agent.tgz")
+	os.RemoveAll(seekerTempFolder)
+	os.Remove(seekerLibraryPath)
+	err = os.MkdirAll(seekerTempFolder, 0755)
+	if err != nil {
+		return err, ""
+	}
+	agentZipAbsolutePath := path.Join(seekerTempFolder, "seeker-node-agent.zip")
+	h.Log.Info("Downloading '%s' to '%s'", agentDownloadAbsoluteUrl, agentZipAbsolutePath)
+	err = h.downloadFile(agentDownloadAbsoluteUrl, agentZipAbsolutePath)
 	if err == nil {
 		h.Log.Info("Download completed without errors")
+	} else {
+		return err, ""
 	}
+	// no native zip support for unzip - using shell utility
+	unzipCommandArgs := []string {agentZipAbsolutePath,"-d",os.TempDir()}
+	err = h.Command.Execute("", os.Stdout, os.Stderr, "unzip", unzipCommandArgs...)
+	if err != nil {
+		return err, ""
+	}
+	if _, err := os.Stat(seekerLibraryPath); os.IsNotExist(err) {
+		return errors.New("Could not find "+ seekerLibraryPath), ""
+	}
+	// Cleanup unneeded files
+	os.Remove(seekerTempFolder)
 	return err, seekerLibraryPath
 }
 func (h SeekerAfterCompileHook) updateNodeModules(pathToSeekerLibrary string, buildDir string) error {
@@ -116,7 +146,7 @@ func extractServiceCredentials(Log *libbuildpack.Logger) (SeekerCredentials, err
 	type UserProvidedService struct {
 		BindingName interface{} `json:"binding_name"`
 		Credentials struct {
-			AgentURI   string `json:"agent_uri"`
+			EnterpriseServerUrl string `json:"enterprise_server_url"`
 			SensorHost string `json:"sensor_host"`
 			SensorPort string `json:"sensor_port"`
 		} `json:"credentials"`
@@ -149,7 +179,7 @@ func extractServiceCredentials(Log *libbuildpack.Logger) (SeekerCredentials, err
 		seekerCreds := SeekerCredentials{
 			SensorHost:       detectedCredentials[0].Credentials.SensorHost,
 			SensorPort:       detectedCredentials[0].Credentials.SensorPort,
-			AgentDownloadURI: detectedCredentials[0].Credentials.AgentURI}
+			EnterpriseServerURL: detectedCredentials[0].Credentials.EnterpriseServerUrl}
 		return seekerCreds, nil
 	} else if len(detectedCredentials) > 1 {
 		Log.Warning("More than one matching service found!")
