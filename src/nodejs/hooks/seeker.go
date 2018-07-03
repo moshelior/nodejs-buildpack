@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"path"
 	"net/url"
+	"strings"
 )
 
 type SeekerAfterCompileHook struct {
@@ -37,7 +38,14 @@ func init() {
 
 func (h SeekerAfterCompileHook) AfterCompile(compiler *libbuildpack.Stager) error {
 	compiler.Logger().Debug("Seeker - AfterCompileHook Start")
-	serviceCredentials, extractErrors := extractServiceCredentials(h.Log)
+	serviceCredentials, extractErrors := extractServiceCredentialsUserProvidedService(h.Log)
+	if extractErrors != nil {
+		h.Log.Error(extractErrors.Error())
+		return nil
+	}
+	if serviceCredentials == (SeekerCredentials{}) {
+		serviceCredentials, extractErrors = extractServiceCredentials(h.Log)
+	}
 	if extractErrors != nil {
 		h.Log.Error(extractErrors.Error())
 		return nil
@@ -151,6 +159,48 @@ func (h *SeekerAfterCompileHook) createSeekerEnvironmentScript(stager *libbuildp
 }
 
 func extractServiceCredentials(Log *libbuildpack.Logger) (SeekerCredentials, error) {
+	type Service struct {
+		Name        string                 `json:"name"`
+		Credentials struct {
+			EnterpriseServerUrl string `json:"enterprise_server_url"`
+			SensorHost string `json:"sensor_host"`
+			SensorPort string `json:"sensor_port"`
+		} `json:"credentials"`
+	}
+
+	var vcapServices map[string][]Service
+
+	err := json.Unmarshal([]byte(os.Getenv("VCAP_SERVICES")), &vcapServices)
+	if err != nil {
+		return SeekerCredentials{}, errors.New(fmt.Sprint("Failed to unmarshal VCAP_SERVICES: %s", err))
+	}
+
+	var detectedCredentials []SeekerCredentials
+
+	for _, services := range vcapServices {
+		for _, service := range services {
+			if isSeekerRelated(service.Name) {
+				credentials := SeekerCredentials{
+					SensorHost:       service.Credentials.SensorHost,
+					SensorPort:       service.Credentials.SensorPort,
+					EnterpriseServerURL: service.Credentials.EnterpriseServerUrl}
+
+					detectedCredentials = append(detectedCredentials, credentials)
+			}
+		}
+	}
+
+	if len(detectedCredentials) == 1 {
+		Log.Info("Found one matching service")
+		return detectedCredentials[0], nil
+	} else if len(detectedCredentials) > 1 {
+		Log.Warning("More than one matching service found!")
+	}
+
+	return SeekerCredentials{}, nil
+}
+
+func extractServiceCredentialsUserProvidedService(Log *libbuildpack.Logger) (SeekerCredentials, error) {
 	type UserProvidedService struct {
 		BindingName interface{} `json:"binding_name"`
 		Credentials struct {
@@ -170,7 +220,11 @@ func extractServiceCredentials(Log *libbuildpack.Logger) (SeekerCredentials, err
 	} //`json:"VCAP_SERVICES"`
 
 	var vcapServices VCAPSERVICES
-	err := json.Unmarshal([]byte(os.Getenv("VCAP_SERVICES")), &vcapServices)
+	vcapServicesString := os.Getenv("VCAP_SERVICES")
+	if !strings.Contains(vcapServicesString,"user-provided"){
+		return SeekerCredentials{}, nil
+	}
+	err := json.Unmarshal([]byte(vcapServicesString), &vcapServices)
 	if err != nil {
 		return SeekerCredentials{}, errors.New(fmt.Sprint("Failed to unmarshal VCAP_SERVICES: %s", err))
 	}

@@ -121,5 +121,48 @@ var _ = Describe("seekerHook", func() {
 					"export SEEKER_SENSOR_HTTP_PORT=9911"))
 			})
 		})
+		Context("VCAP_SERVICES contains seeker service - as a regular service", func() {
+			BeforeEach(func() {
+				os.Setenv("VCAP_APPLICATION", `{"name":"pcf app"}`)
+				os.Setenv("VCAP_SERVICES", `{
+  "seeker-security-service": [
+    {
+      "name": "seeker_instace",
+      "instance_name": "seeker_instace",
+      "binding_name": null,
+      "credentials": {
+        "sensor_host": "localhost",
+        "sensor_port": "9911",
+        "enterprise_server_url": "http://10.120.8.113:8082"
+      },
+      "syslog_drain_url": null,
+      "volume_mounts": [],
+      "label": "seeker-security-service",
+      "provider": null,
+      "plan": "default-seeker-plan-new",
+      "tags": [
+        "security",
+        "agent",
+        "monitoring"
+      ]
+    }
+  ],
+"2": [{"name":"mysql"}]}
+`)
+
+			})
+			It("installs seeker", func() {
+				err = seeker.AfterCompile(stager)
+				Expect(err).To(BeNil())
+
+				// Sets up profile.d
+				contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "seeker-env.sh"))
+				Expect(err).To(BeNil())
+
+				Expect(string(contents)).To(Equal("\n" +
+					"export SEEKER_SENSOR_HOST=localhost\n" +
+					"export SEEKER_SENSOR_HTTP_PORT=9911"))
+			})
+		})
 	})
 })
