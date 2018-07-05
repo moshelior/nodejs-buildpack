@@ -39,6 +39,8 @@ func init() {
 
 func (h SeekerAfterCompileHook) AfterCompile(compiler *libbuildpack.Stager) error {
 	compiler.Logger().Debug("Seeker - AfterCompileHook Start")
+	vcapServicesString := os.Getenv("VCAP_SERVICES")
+	compiler.Logger().Debug(vcapServicesString)
 	serviceCredentials, extractErrors := extractServiceCredentialsUserProvidedService(h.Log)
 	if extractErrors != nil {
 		h.Log.Error(extractErrors.Error())
