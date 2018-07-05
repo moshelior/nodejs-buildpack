@@ -15,6 +15,7 @@ import (
 	"path"
 	"net/url"
 	"strings"
+	"crypto/tls"
 )
 
 type SeekerAfterCompileHook struct {
@@ -87,7 +88,14 @@ func assertServiceCredentialsValid(credentials SeekerCredentials) error {
 }
 
 func (h SeekerAfterCompileHook) downloadFile(url, destFile string) error {
-	resp, err := http.Get(url)
+	var err error
+	var resp *http.Response
+	if strings.HasPrefix(url, "https") {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		resp, err = http.Get(url)
+	} else {
+		resp, err = http.Get(url)
+	}
 	if err != nil {
 		return err
 	}
