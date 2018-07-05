@@ -26,8 +26,8 @@ type SeekerAfterCompileHook struct {
 }
 
 type SeekerCredentials struct {
-	SensorHost       string
-	SensorPort       string
+	SensorHost          string
+	SensorPort          string
 	EnterpriseServerURL string
 }
 
@@ -115,7 +115,7 @@ func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.S
 	}
 	parsedEnterpriseServerUrl.Path = path.Join(parsedEnterpriseServerUrl.Path, "rest/ui/installers/binaries/LINUX")
 	sensorDownloadAbsoluteUrl := parsedEnterpriseServerUrl.String()
-	h.Log.Info("Sensor download url %s",sensorDownloadAbsoluteUrl)
+	h.Log.Info("Sensor download url %s", sensorDownloadAbsoluteUrl)
 	var seekerTempFolder = filepath.Join(os.TempDir(), "seeker_tmp")
 	seekerLibraryPath := filepath.Join(os.TempDir(), "seeker-agent.tgz")
 	os.RemoveAll(seekerTempFolder)
@@ -134,20 +134,20 @@ func (h SeekerAfterCompileHook) fetchSeekerAgentTarball(compiler *libbuildpack.S
 		return err, ""
 	}
 	// no native zip support for unzip - using shell utility
-	unzipCommandArgs := []string {sensorInstallerZipAbsolutePath,"-d",seekerTempFolder}
+	unzipCommandArgs := []string{sensorInstallerZipAbsolutePath, "-d", seekerTempFolder}
 	err = h.Command.Execute("", os.Stdout, os.Stderr, "unzip", unzipCommandArgs...)
 	if err != nil {
 		return err, ""
 	}
-	sensorJarFile := path.Join(seekerTempFolder,"SeekerInstaller.jar")
+	sensorJarFile := path.Join(seekerTempFolder, "SeekerInstaller.jar")
 	agentPathInsideJarFile := "inline/agents/nodejs/*"
-	unzipCommandArgs = []string {"-j",sensorJarFile,agentPathInsideJarFile, "-d",os.TempDir()}
+	unzipCommandArgs = []string{"-j", sensorJarFile, agentPathInsideJarFile, "-d", os.TempDir()}
 	err = h.Command.Execute("", os.Stdout, os.Stderr, "unzip", unzipCommandArgs...)
 	if err != nil {
 		return err, ""
 	}
 	if _, err := os.Stat(seekerLibraryPath); os.IsNotExist(err) {
-		return errors.New("Could not find "+ seekerLibraryPath), ""
+		return errors.New("Could not find " + seekerLibraryPath), ""
 	}
 	// Cleanup unneeded files
 	os.Remove(seekerTempFolder)
@@ -170,12 +170,14 @@ func (h *SeekerAfterCompileHook) createSeekerEnvironmentScript(stager *libbuildp
 
 func extractServiceCredentials(Log *libbuildpack.Logger) (SeekerCredentials, error) {
 	type Service struct {
-		Name        string                 `json:"name"`
-		Label        string                 `json:"label"`
+		Name         string `json:"name"`
+		Label        string `json:"label"`
+		InstanceName string `json:"instance_name"`
+		BindingName  string `json:"binding_name"`
 		Credentials struct {
 			EnterpriseServerUrl string `json:"enterprise_server_url"`
-			SensorHost string `json:"sensor_host"`
-			SensorPort string `json:"sensor_port"`
+			SensorHost          string `json:"sensor_host"`
+			SensorPort          string `json:"sensor_port"`
 		} `json:"credentials"`
 	}
 
@@ -190,13 +192,13 @@ func extractServiceCredentials(Log *libbuildpack.Logger) (SeekerCredentials, err
 
 	for _, services := range vcapServices {
 		for _, service := range services {
-			if isSeekerRelated(service.Label)   {
+			if isSeekerRelated(service.Name, service.Label, service.InstanceName) {
 				credentials := SeekerCredentials{
-					SensorHost:       service.Credentials.SensorHost,
-					SensorPort:       service.Credentials.SensorPort,
+					SensorHost:          service.Credentials.SensorHost,
+					SensorPort:          service.Credentials.SensorPort,
 					EnterpriseServerURL: service.Credentials.EnterpriseServerUrl}
 
-					detectedCredentials = append(detectedCredentials, credentials)
+				detectedCredentials = append(detectedCredentials, credentials)
 			}
 		}
 	}
@@ -216,8 +218,8 @@ func extractServiceCredentialsUserProvidedService(Log *libbuildpack.Logger) (See
 		BindingName interface{} `json:"binding_name"`
 		Credentials struct {
 			EnterpriseServerUrl string `json:"enterprise_server_url"`
-			SensorHost string `json:"sensor_host"`
-			SensorPort string `json:"sensor_port"`
+			SensorHost          string `json:"sensor_host"`
+			SensorPort          string `json:"sensor_port"`
 		} `json:"credentials"`
 		InstanceName   string   `json:"instance_name"`
 		Label          string   `json:"label"`
@@ -232,7 +234,7 @@ func extractServiceCredentialsUserProvidedService(Log *libbuildpack.Logger) (See
 
 	var vcapServices VCAPSERVICES
 	vcapServicesString := os.Getenv("VCAP_SERVICES")
-	if !strings.Contains(vcapServicesString,"user-provided"){
+	if !strings.Contains(vcapServicesString, "user-provided") {
 		return SeekerCredentials{}, nil
 	}
 	err := json.Unmarshal([]byte(vcapServicesString), &vcapServices)
@@ -243,15 +245,15 @@ func extractServiceCredentialsUserProvidedService(Log *libbuildpack.Logger) (See
 	var detectedCredentials []UserProvidedService
 
 	for _, service := range vcapServices.UserProvidedService {
-		if isSeekerRelated(service.Name, service.Label) { // maybe add tags too
+		if isSeekerRelated(service.Name, service.Label, service.InstanceName) {
 			detectedCredentials = append(detectedCredentials, service)
 		}
 	}
 	if len(detectedCredentials) == 1 {
 		Log.Info("Found one matching service: %s", detectedCredentials[0].Name)
 		seekerCreds := SeekerCredentials{
-			SensorHost:       detectedCredentials[0].Credentials.SensorHost,
-			SensorPort:       detectedCredentials[0].Credentials.SensorPort,
+			SensorHost:          detectedCredentials[0].Credentials.SensorHost,
+			SensorPort:          detectedCredentials[0].Credentials.SensorPort,
 			EnterpriseServerURL: detectedCredentials[0].Credentials.EnterpriseServerUrl}
 		return seekerCreds, nil
 	} else if len(detectedCredentials) > 1 {

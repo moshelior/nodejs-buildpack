@@ -137,7 +137,7 @@ var _ = Describe("seekerHook", func() {
       },
       "syslog_drain_url": null,
       "volume_mounts": [],
-      "label": "seeker-security-service",
+      "label": null,
       "provider": null,
       "plan": "default-seeker-plan-new",
       "tags": [
