@@ -171,6 +171,7 @@ func (h *SeekerAfterCompileHook) createSeekerEnvironmentScript(stager *libbuildp
 func extractServiceCredentials(Log *libbuildpack.Logger) (SeekerCredentials, error) {
 	type Service struct {
 		Name        string                 `json:"name"`
+		Label        string                 `json:"label"`
 		Credentials struct {
 			EnterpriseServerUrl string `json:"enterprise_server_url"`
 			SensorHost string `json:"sensor_host"`
@@ -189,7 +190,7 @@ func extractServiceCredentials(Log *libbuildpack.Logger) (SeekerCredentials, err
 
 	for _, services := range vcapServices {
 		for _, service := range services {
-			if isSeekerRelated(service.Name) {
+			if isSeekerRelated(service.Label)   {
 				credentials := SeekerCredentials{
 					SensorHost:       service.Credentials.SensorHost,
 					SensorPort:       service.Credentials.SensorPort,
