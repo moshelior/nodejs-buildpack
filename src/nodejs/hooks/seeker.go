@@ -47,10 +47,17 @@ func (h SeekerAfterCompileHook) AfterCompile(compiler *libbuildpack.Stager) erro
 	vcapServicesString := os.Getenv("VCAP_SERVICES")
 	h.Log.Debug(vcapServicesString)
 	directDownloadAgentValue := os.Getenv(AgentDirectDownloadKey)
-	h.Log.Info("%s=%s", AgentDirectDownloadKey, directDownloadAgentValue)
+	h.Log.Debug("%s=%s", AgentDirectDownloadKey, directDownloadAgentValue)
 	entryPointPath := os.Getenv(EntryPointFile)
-	h.Log.Info("%s=%s", EntryPointFile, entryPointPath)
-
+	h.Log.Debug("%s=%s", EntryPointFile, entryPointPath)
+	var err error
+	if entryPointPath != "" {
+		err = h.addSeekerAgentRequire(compiler.BuildDir(),entryPointPath)
+	}
+	if err != nil {
+		h.Log.Error(err.Error())
+		return nil
+	}
 	serviceCredentials, extractErrors := extractServiceCredentialsUserProvidedService(h.Log)
 	if extractErrors != nil {
 		h.Log.Error(extractErrors.Error())
@@ -63,7 +70,7 @@ func (h SeekerAfterCompileHook) AfterCompile(compiler *libbuildpack.Stager) erro
 		h.Log.Error(extractErrors.Error())
 		return nil
 	}
-	err := assertServiceCredentialsValid(serviceCredentials)
+	err = assertServiceCredentialsValid(serviceCredentials)
 	if err != nil {
 		return err
 	}
@@ -77,11 +84,6 @@ func (h SeekerAfterCompileHook) AfterCompile(compiler *libbuildpack.Stager) erro
 		err, seekerLibraryToInstall = h.fetchSeekerAgentTarballDirectDownload(compiler)
 	} else {
 		err, seekerLibraryToInstall = h.fetchSeekerAgentTarballWithinSensor(compiler)
-	}
-	if err == nil {
-		if entryPointPath != "" {
-			err = h.addSeekerAgentRequire(compiler.BuildDir(),entryPointPath)
-		}
 	}
 	if err == nil {
         if entryPointPath != "" {
@@ -261,7 +263,7 @@ func extractServiceCredentials(Log *libbuildpack.Logger) (SeekerCredentials, err
 
 	err := json.Unmarshal([]byte(os.Getenv("VCAP_SERVICES")), &vcapServices)
 	if err != nil {
-		return SeekerCredentials{}, errors.New(fmt.Sprint("Failed to unmarshal VCAP_SERVICES: %s", err))
+		return SeekerCredentials{}, errors.New(fmt.Sprint("Failed to unmarshal VCAP_SERVICES:"))
 	}
 
 	var detectedCredentials []SeekerCredentials
@@ -315,7 +317,7 @@ func extractServiceCredentialsUserProvidedService(Log *libbuildpack.Logger) (See
 	}
 	err := json.Unmarshal([]byte(vcapServicesString), &vcapServices)
 	if err != nil {
-		return SeekerCredentials{}, errors.New(fmt.Sprint("Failed to unmarshal VCAP_SERVICES: %s", err))
+		return SeekerCredentials{}, errors.New(fmt.Sprint("Failed to unmarshal VCAP_SERVICES: "))
 	}
 
 	var detectedCredentials []UserProvidedService
