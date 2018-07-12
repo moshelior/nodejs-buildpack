@@ -1,30 +1,30 @@
 package hooks_test
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"bytes"
 	"github.com/cloudfoundry/libbuildpack"
 	"github.com/golang/mock/gomock"
-	"nodejs/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/jarcoal/httpmock.v1"
+	"io/ioutil"
+	"nodejs/hooks"
+	"os"
+	"path/filepath"
 )
 
 var _ = Describe("seekerHook", func() {
 	var (
-		err          error
-		buildDir     string
-		depsDir      string
-		depsIdx      string
-		logger       *libbuildpack.Logger
-		stager       *libbuildpack.Stager
-		mockCtrl     *gomock.Controller
-		mockCommand  *MockCommand
-		buffer       *bytes.Buffer
-		seeker       hooks.SeekerAfterCompileHook
+		err         error
+		buildDir    string
+		depsDir     string
+		depsIdx     string
+		logger      *libbuildpack.Logger
+		stager      *libbuildpack.Stager
+		mockCtrl    *gomock.Controller
+		mockCommand *MockCommand
+		buffer      *bytes.Buffer
+		seeker      hooks.SeekerAfterCompileHook
 	)
 
 	BeforeEach(func() {
@@ -65,7 +65,108 @@ var _ = Describe("seekerHook", func() {
 		Expect(err).To(BeNil())
 	})
 
-	Describe("AfterCompile", func() {
+	//      Describe("AfterCompile - real download, extract from sensor", func() {
+	//              var (
+	//                      oldVcapApplication string
+	//                      oldVcapServices    string
+	//                      oldBpDebug         string
+	//              )
+	//              BeforeEach(func() {
+	//                      oldVcapApplication = os.Getenv("VCAP_APPLICATION")
+	//                      oldVcapServices = os.Getenv("VCAP_SERVICES")
+	//                      oldBpDebug = os.Getenv("BP_DEBUG")
+	//                      httpmock.Deactivate()
+	//
+	//              })
+	//              AfterEach(func() {
+	//                      os.Setenv("VCAP_APPLICATION", oldVcapApplication)
+	//                      os.Setenv("VCAP_SERVICES", oldVcapServices)
+	//                      os.Setenv("BP_DEBUG", oldBpDebug)
+	//                      httpmock.Activate()
+	//              })
+	//
+	//              Context("VCAP_SERVICES contains seeker service - as a user provided service", func() {
+	//                      BeforeEach(func() {
+	//                              os.Setenv("VCAP_APPLICATION", `{"name":"pcf app"}`)
+	//                              os.Setenv("VCAP_SERVICES", `{
+	//   "user-provided": [
+	//     {
+	//       "name": "seeker_service_v2",
+	//       "instance_name": "seeker_service_v2",
+	//       "binding_name": null,
+	//       "credentials": {
+	//         "enterprise_server_url": "http://10.120.8.113:8082",
+	//         "sensor_host": "localhost",
+	//         "sensor_port": "9911"
+	//       },
+	//       "syslog_drain_url": "",
+	//       "volume_mounts": [],
+	//       "label": "user-provided",
+	//       "tags": []
+	//     }
+	//   ]
+	// }`)
+	//
+	//                      })
+	//                      It("installs seeker", func() {
+	//                              err = seeker.AfterCompile(stager)
+	//                              Expect(err).To(BeNil())
+	//
+	//                              // Sets up profile.d
+	//                              contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "seeker-env.sh"))
+	//                              Expect(err).To(BeNil())
+	//
+	//                              Expect(string(contents)).To(Equal("\n" +
+	//                                      "export SEEKER_SENSOR_HOST=localhost\n" +
+	//                                      "export SEEKER_SENSOR_HTTP_PORT=9911"))
+	//                      })
+	//              })
+	//              Context("VCAP_SERVICES contains seeker service - as a regular service", func() {
+	//                      BeforeEach(func() {
+	//                              os.Setenv("VCAP_APPLICATION", `{"name":"pcf app"}`)
+	//                              os.Setenv("VCAP_SERVICES", `{
+	// "seeker-security-service": [
+	//   {
+	//     "name": "seeker_instace",
+	//     "instance_name": "seeker_instace",
+	//     "binding_name": null,
+	//     "credentials": {
+	//       "sensor_host": "localhost",
+	//       "sensor_port": "9911",
+	//       "enterprise_server_url": "http://10.120.8.113:8082"
+	//     },
+	//     "syslog_drain_url": null,
+	//     "volume_mounts": [],
+	//     "label": null,
+	//     "provider": null,
+	//     "plan": "default-seeker-plan-new",
+	//     "tags": [
+	//       "security",
+	//       "agent",
+	//       "monitoring"
+	//     ]
+	//   }
+	// ],
+	//"2": [{"name":"mysql"}]}
+	//`)
+	//
+	//                      })
+	//                      It("installs seeker", func() {
+	//                              err = seeker.AfterCompile(stager)
+	//                              Expect(err).To(BeNil())
+	//
+	//                              // Sets up profile.d
+	//                              contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "seeker-env.sh"))
+	//                              Expect(err).To(BeNil())
+	//
+	//                              Expect(string(contents)).To(Equal("\n" +
+	//                                      "export SEEKER_SENSOR_HOST=localhost\n" +
+	//                                      "export SEEKER_SENSOR_HTTP_PORT=9911"))
+	//                      })
+	//
+	//              })
+	//      })
+	Describe("AfterCompile - real download, direct agent download", func() {
 		var (
 			oldVcapApplication string
 			oldVcapServices    string
@@ -75,8 +176,9 @@ var _ = Describe("seekerHook", func() {
 			oldVcapApplication = os.Getenv("VCAP_APPLICATION")
 			oldVcapServices = os.Getenv("VCAP_SERVICES")
 			oldBpDebug = os.Getenv("BP_DEBUG")
+			os.Setenv("SEEKER_AGENT_DIRECT_DOWNLOAD", "true")
+			os.Setenv("SEEKER_APP_ENTRY_POINT", "./server.js")
 			httpmock.Deactivate()
-
 		})
 		AfterEach(func() {
 			os.Setenv("VCAP_APPLICATION", oldVcapApplication)
@@ -89,23 +191,23 @@ var _ = Describe("seekerHook", func() {
 			BeforeEach(func() {
 				os.Setenv("VCAP_APPLICATION", `{"name":"pcf app"}`)
 				os.Setenv("VCAP_SERVICES", `{
-    "user-provided": [
-      {
-        "name": "seeker_service_v2",
-        "instance_name": "seeker_service_v2",
-        "binding_name": null,
-        "credentials": {
-          "enterprise_server_url": "http://10.120.8.113:8082",
-          "sensor_host": "localhost",
-          "sensor_port": "9911"
-        },
-        "syslog_drain_url": "",
-        "volume_mounts": [],
-        "label": "user-provided",
-        "tags": []
-      }
-    ]
-  }`)
+   "user-provided": [
+     {
+       "name": "seeker_service_v2",
+       "instance_name": "seeker_service_v2",
+       "binding_name": null,
+       "credentials": {
+         "enterprise_server_url": "http://10.120.8.113:8082",
+         "sensor_host": "localhost",
+         "sensor_port": "9911"
+       },
+       "syslog_drain_url": "",
+       "volume_mounts": [],
+       "label": "user-provided",
+       "tags": []
+     }
+   ]
+ }`)
 
 			})
 			It("installs seeker", func() {
@@ -125,28 +227,28 @@ var _ = Describe("seekerHook", func() {
 			BeforeEach(func() {
 				os.Setenv("VCAP_APPLICATION", `{"name":"pcf app"}`)
 				os.Setenv("VCAP_SERVICES", `{
-  "seeker-security-service": [
-    {
-      "name": "seeker_instace",
-      "instance_name": "seeker_instace",
-      "binding_name": null,
-      "credentials": {
-        "sensor_host": "localhost",
-        "sensor_port": "9911",
-        "enterprise_server_url": "http://10.120.8.113:8082"
-      },
-      "syslog_drain_url": null,
-      "volume_mounts": [],
-      "label": null,
-      "provider": null,
-      "plan": "default-seeker-plan-new",
-      "tags": [
-        "security",
-        "agent",
-        "monitoring"
-      ]
-    }
-  ],
+ "seeker-security-service": [
+   {
+     "name": "seeker_instace",
+     "instance_name": "seeker_instace",
+     "binding_name": null,
+     "credentials": {
+       "sensor_host": "localhost",
+       "sensor_port": "9911",
+       "enterprise_server_url": "http://10.120.8.113:8082"
+     },
+     "syslog_drain_url": null,
+     "volume_mounts": [],
+     "label": null,
+     "provider": null,
+     "plan": "default-seeker-plan-new",
+     "tags": [
+       "security",
+       "agent",
+       "monitoring"
+     ]
+   }
+ ],
 "2": [{"name":"mysql"}]}
 `)
 
@@ -163,6 +265,8 @@ var _ = Describe("seekerHook", func() {
 					"export SEEKER_SENSOR_HOST=localhost\n" +
 					"export SEEKER_SENSOR_HTTP_PORT=9911"))
 			})
+
 		})
 	})
+
 })
