@@ -47,9 +47,9 @@ func (h SeekerAfterCompileHook) AfterCompile(compiler *libbuildpack.Stager) erro
 	vcapServicesString := os.Getenv("VCAP_SERVICES")
 	h.Log.Debug(vcapServicesString)
 	directDownloadAgentValue := os.Getenv(AgentDirectDownloadKey)
-	h.Log.Debug("%s=%s", AgentDirectDownloadKey, directDownloadAgentValue)
+	h.Log.Info("%s=%s", AgentDirectDownloadKey, directDownloadAgentValue)
 	entryPointPath := os.Getenv(EntryPointFile)
-	h.Log.Debug("%s=%s", EntryPointFile, entryPointPath)
+	h.Log.Info("%s=%s", EntryPointFile, entryPointPath)
 	var err error
 	if entryPointPath != "" {
 		err = h.addSeekerAgentRequire(compiler.BuildDir(),entryPointPath)
