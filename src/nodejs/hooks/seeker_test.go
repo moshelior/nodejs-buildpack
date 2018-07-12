@@ -177,7 +177,7 @@ var _ = Describe("seekerHook", func() {
 			oldVcapServices = os.Getenv("VCAP_SERVICES")
 			oldBpDebug = os.Getenv("BP_DEBUG")
 			os.Setenv("SEEKER_AGENT_DIRECT_DOWNLOAD", "true")
-			os.Setenv("SEEKER_APP_ENTRY_POINT", "./server.js")
+			//os.Setenv("SEEKER_APP_ENTRY_POINT", "./server.js")
 			httpmock.Deactivate()
 		})
 		AfterEach(func() {
