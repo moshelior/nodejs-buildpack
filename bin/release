@@ -8,3 +8,5 @@ if [[ "${OPTIMIZE_MEMORY:-}" = "true" ]]; then
 else
   echo '  web: npm start'
 fi
+
+

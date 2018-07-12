@@ -8,3 +8,4 @@ if [ -f "$1/package.json" ]; then
 fi
 
 exit 1
+
