@@ -79,6 +79,11 @@ func (h SeekerAfterCompileHook) AfterCompile(compiler *libbuildpack.Stager) erro
 		err, seekerLibraryToInstall = h.fetchSeekerAgentTarballWithinSensor(compiler)
 	}
 	if err == nil {
+		if entryPointPath != "" {
+			err = h.addSeekerAgentRequire(compiler.BuildDir(),entryPointPath)
+		}
+	}
+	if err == nil {
 		h.Log.Info("Before Installing seeker agent dependency")
 		h.updateNodeModules(seekerLibraryToInstall, compiler.BuildDir())
 		h.Log.Info("After Installing seeker agent dependency")
@@ -89,9 +94,9 @@ func (h SeekerAfterCompileHook) AfterCompile(compiler *libbuildpack.Stager) erro
 			h.Log.Info("Done creating seeker-env.sh script")
 		}
 	}
-	if entryPointPath != "" {
+//	if entryPointPath != "" {
 		//err = h.addSeekerAgentRequire(compiler.BuildDir(),entryPointPath)
-	}
+//	}
 	return err
 
 }
